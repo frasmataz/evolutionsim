@@ -5,6 +5,7 @@ import string
 import math
 from style import style
 from pprint import pprint
+import brain
 
 # Configure logging
 log = logging.getLogger(__name__)
@@ -23,6 +24,9 @@ carryOn = True
 
 # The clock will be used to control how fast the screen updates
 clock = pygame.time.Clock()
+
+def dist(x1,x2,y1,y2):
+    return math.hypot(x2-x1,y2,y1)
 
 class Creature:
     max_speed = 4
@@ -48,9 +52,21 @@ class Creature:
         )
         self.color = color
 
-        self.speed = 1.0
+        self.speed = 0.0
         self.rspeed = 0.0
         self.angle = 0.0
+        self.brain = brain.Brain(self.name)
+
+    def tick(self):
+        output = self.brain.tick(
+            self.speed,
+            self.angle,
+            self.rspeed,
+            self.pos[0]-target[0],
+            self.pos[1]-target[1]
+        )
+        self.speed = output['speed']
+        self.rspeed = output['rspeed']
 
 def get_name():
     name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(6)])
@@ -63,6 +79,7 @@ def print_creatures():
 def setup():
     global creatures
     global bounding_rect
+    global target
 
     bounding_rect = pygame.Rect(
         style['sim_panel'].left + style['creature']['radius'],
@@ -76,7 +93,7 @@ def setup():
         new_creature_name = get_name()
         creatures.append(Creature(new_creature_name))
 
-    target_pos = (
+    target = (
         random.randint(
             bounding_rect.left,
             bounding_rect.left + bounding_rect.width
@@ -92,6 +109,7 @@ def setup():
 def logic():
     # Update creature positions
     for creature in creatures:
+        creature.tick()
         creature.angle = creature.angle + (creature.rspeed * creature.max_rspeed)
         creature.angle = creature.angle % (math.pi * 2)
 
