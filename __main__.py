@@ -2,6 +2,7 @@ import pygame
 import logging
 import random
 import string
+import math
 from style import style
 from pprint import pprint
 
@@ -24,13 +25,16 @@ carryOn = True
 clock = pygame.time.Clock()
 
 class Creature:
+    max_speed = 4
+    max_rspeed = 10
+
     def __init__(self, name):
         self.pos = (
-            random.randint(
+            random.uniform(
                 bounding_rect.left,
                 bounding_rect.left + bounding_rect.width
             ),
-            random.randint(
+            random.uniform(
                 bounding_rect.top,
                 bounding_rect.top + bounding_rect.height
             ),
@@ -43,6 +47,10 @@ class Creature:
             random.randint(40,100)
         )
         self.color = color
+
+        self.speed = 1.0
+        self.rspeed = 0.0
+        self.angle = 0.0
 
 def get_name():
     name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(6)])
@@ -68,9 +76,45 @@ def setup():
         new_creature_name = get_name()
         creatures.append(Creature(new_creature_name))
 
+    target_pos = (
+        random.randint(
+            bounding_rect.left,
+            bounding_rect.left + bounding_rect.width
+        ),
+        random.randint(
+            bounding_rect.top,
+            bounding_rect.top + bounding_rect.height
+        )
+    )
+
+    sim_state = 'GEN_DONE'
 
 def logic():
-    pass
+    # Update creature positions
+    for creature in creatures:
+        creature.angle = creature.angle + (creature.rspeed * creature.max_rspeed)
+        creature.angle = creature.angle % (math.pi * 2)
+
+
+
+        newpos = (
+            min(
+                max(
+                    creature.pos[0] + (creature.speed * creature.max_speed * math.cos(creature.angle)),
+                    bounding_rect.left
+                ),
+                bounding_rect.left + bounding_rect.width
+            ),
+            min(
+                max(
+                    creature.pos[1] + (creature.speed * creature.max_speed * math.sin(creature.angle)),
+                    bounding_rect.top
+                ),
+                bounding_rect.top + bounding_rect.height
+            )
+        )
+
+        creature.pos = newpos
 
 def draw():
     #Flush background colour
@@ -93,8 +137,25 @@ def draw():
         pygame.draw.circle(
             screen,
             creature.color,
-            creature.pos,
+            (int(creature.pos[0]), int(creature.pos[1])),
             style['creature']['radius']
+        )
+
+        hsv = (
+            creature.color.hsva[0],
+            creature.color.hsva[1],
+            max(creature.color.hsva[2] - 40,0)
+        )
+
+        border_color = pygame.Color(0,0,0,0)
+        border_color.hsva = hsv
+
+        pygame.draw.circle(
+            screen,
+            border_color,
+            (int(creature.pos[0]), int(creature.pos[1])),
+            style['creature']['radius'],
+            2
         )
 
         name_text_surface = style['creature']['name_font'].render(
