@@ -1,7 +1,18 @@
 import pygame
 
+pygame.font.init()
+
 style = {}
 
+# Window colours
+style['background_color']       = (86, 179, 60)   # green
+style['panel_color']            = (166, 228, 146)  # pale green
+
+style['black']                  = (0, 0, 0)
+style['white']                  = (255, 255, 255)
+style['red']                    = (255, 0, 0)
+
+# Main window layout
 style['main_window_size'] = (1200, 740)
 
 style['sim_panel'] = pygame.Rect(
@@ -17,10 +28,9 @@ style['side_panel'] = pygame.Rect(
     style['main_window_size'][1] - (20 * 2)
 )
 
-# colours
-style['background_color']       = (86, 179, 60)   # green
-style['panel_color']            = (166, 228, 146)  # pale green
-
-style['black']                  = (0, 0, 0)
-style['white']                  = (255, 255, 255)
-style['red']                    = (255, 0, 0)
+# Creature
+style['creature'] = {
+    'radius': 10,
+    'name_font': pygame.font.SysFont('Andale Mono',18),
+    'name_font_spacing': 20
+}

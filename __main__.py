@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-target_population = 100
+target_population = 30
 
 # Initialise pygame
 pygame.init()
@@ -25,8 +25,24 @@ clock = pygame.time.Clock()
 
 class Creature:
     def __init__(self, name):
-        self.pos = {'x':0,'y':0}
+        self.pos = (
+            random.randint(
+                bounding_rect.left,
+                bounding_rect.left + bounding_rect.width
+            ),
+            random.randint(
+                bounding_rect.top,
+                bounding_rect.top + bounding_rect.height
+            ),
+        )
         self.name = name
+        color = pygame.Color(0,0,0)
+        color.hsva = (
+            (random.randint(0,240)+180)%360,
+            random.randint(20,100),
+            random.randint(40,100)
+        )
+        self.color = color
 
 def get_name():
     name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(6)])
@@ -38,13 +54,20 @@ def print_creatures():
 
 def setup():
     global creatures
+    global bounding_rect
+
+    bounding_rect = pygame.Rect(
+        style['sim_panel'].left + style['creature']['radius'],
+        style['sim_panel'].top + style['creature']['radius'],
+        style['sim_panel'].width - (style['creature']['radius'] * 2),
+        style['sim_panel'].height - (style['creature']['radius'] * 2)
+    )
 
     creatures = []
     for i in range(0,target_population):
         new_creature_name = get_name()
         creatures.append(Creature(new_creature_name))
 
-    print_creatures()
 
 def logic():
     pass
@@ -64,6 +87,25 @@ def draw():
         style['panel_color'],
         style['side_panel']
     )
+
+    # Draw creatures
+    for creature in creatures:
+        pygame.draw.circle(
+            screen,
+            creature.color,
+            creature.pos,
+            style['creature']['radius']
+        )
+
+        name_text_surface = style['creature']['name_font'].render(
+            creature.name, True, style['black']
+        )
+
+        screen.blit(
+            name_text_surface,
+            (creature.pos[0] - (name_text_surface.get_width() / 2),
+            creature.pos[1] - (name_text_surface.get_height() / 2) + style['creature']['name_font_spacing'])
+        )
 
     pygame.display.flip()
     clock.tick(60)
