@@ -43,9 +43,9 @@ style['net_display_area'] = pygame.Rect(
     style['side_panel'].height - style['side_creature_name_height']
 )
 
-style['net_node_rad'] = 25
+style['net_node_rad'] = 16
 style['net_node_hue'] = 324 # Pink
-style['net_node_spacing'] = (100,100)
+style['net_node_spacing'] = (70,50)
 style['net_input_label'] = style['net_display_area'].left + 20
 
 # Creature

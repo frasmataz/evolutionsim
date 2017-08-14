@@ -4,6 +4,7 @@ import random
 import string
 import math
 import copy
+from concurrent.futures import ThreadPoolExecutor
 from style import style
 from pprint import pprint
 import brain
@@ -13,9 +14,9 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-target_population = 100
-killed_per_gen = 10
-ticks_per_gen = 900
+target_population = 60
+killed_per_gen = 5
+ticks_per_gen = 500
 auto_gen = True
 frameskip = 1
 
@@ -36,11 +37,12 @@ def dist(x1,y1,x2,y2):
 
 class Creature:
     max_speed = 4
-    max_rspeed = 1
+    max_rspeed = 0.3
 
     def __init__(self, name):
         self.reset()
         self.name = name
+        self.number = 0
         color = pygame.Color(0,0,0)
         color.hsva = (
             (random.randint(0,240)+180)%360,
@@ -58,7 +60,7 @@ class Creature:
             ),
             random.uniform(
                 bounding_rect.top,
-                bounding_rect.top + bounding_rect.height
+                bounding_rect.top + (bounding_rect.height/2)
             ),
         )
         self.speed = 0.0
@@ -76,19 +78,18 @@ class Creature:
             (self.pos[1]-target[1])/style['sim_panel'].height
         )
 
-        self.fitness = max(self.fitness,
-            dist(self.start_pos[0], self.start_pos[1], target[0], target[1]) /
-            dist(self.pos[0], self.pos[1], target[0], target[1])
-        )
+        self.fitness = self.fitness + (dist(self.start_pos[0], self.start_pos[1], target[0], target[1]) /
+            dist(self.pos[0], self.pos[1], target[0], target[1]) - 1)
 
         self.speed = output['speed'] * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
 
     def mutate(self):
+        self.number  = self.number + 1
         self.brain.mutate()
 
 def get_name():
-    name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(6)])
+    name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(2)])
     return name
 
 def get_clicked_object(pos):
@@ -98,57 +99,41 @@ def get_clicked_object(pos):
         if dist(pos[0],pos[1],creature.pos[0],creature.pos[1]) < style['creature']['radius']:
             return creature
 
-def sim_tick():
-    global sim_time
-    global sim_state
-    global prev_state
+def update_creature(creature):
     # Update creature positions
-    for creature in generations[-1]:
-        creature.tick()
-        creature.angle = creature.angle + creature.rspeed
-        while creature.angle > (math.pi * 2):
-            creature.angle = creature.angle - (math.pi * 2)
+    creature.tick()
+    creature.angle = creature.angle + creature.rspeed
+    while creature.angle > (math.pi * 2):
+        creature.angle = creature.angle - (math.pi * 2)
 
-        while creature.angle < -(math.pi * 2):
-            creature.angle = creature.angle + (math.pi * 2)
+    while creature.angle < -(math.pi * 2):
+        creature.angle = creature.angle + (math.pi * 2)
 
-        newpos = (
-            min(
-                max(
-                    creature.pos[0] + (creature.speed * math.cos(creature.angle)),
-                    bounding_rect.left
-                ),
-                bounding_rect.left + bounding_rect.width
+    newpos = (
+        min(
+            max(
+                creature.pos[0] + (creature.speed * math.cos(creature.angle)),
+                bounding_rect.left
             ),
-            min(
-                max(
-                    creature.pos[1] + (creature.speed * math.sin(creature.angle)),
-                    bounding_rect.top
-                ),
-                bounding_rect.top + bounding_rect.height
-            )
+            bounding_rect.left + bounding_rect.width
+        ),
+        min(
+            max(
+                creature.pos[1] + (creature.speed * math.sin(creature.angle)),
+                bounding_rect.top
+            ),
+            bounding_rect.top + bounding_rect.height
         )
+    )
+    creature.pos = newpos
+    return creature
 
-        creature.pos = newpos
-
-    sim_time = sim_time + 1
-
-    if sim_time > ticks_per_gen:
-        if auto_gen:
-            sim_state = 'GEN_DONE'
-        else:
-            prev_state = 'GEN_DONE'
-            sim_state = 'PAUSED'
 
 def create_generation():
     global sim_time
     global sim_state
 
     last_gen = generations[-1]
-
-    for c in last_gen:
-        if dist(c.pos[0],c.pos[1],c.start_pos[0],c.start_pos[1]) < 100:
-            c.fitness = 0.0
 
     last_gen.sort(key=lambda c: c.fitness, reverse=True)
 
@@ -178,6 +163,7 @@ def setup():
     global generations
     global sim_time
     global sim_state
+    global thread_pool
 
     selected_creature = None
     info_text = ''
@@ -209,20 +195,40 @@ def setup():
     # )
 
     target = (((style['sim_panel'].left * 2) + style['sim_panel'].width) / 2,
-        ((style['sim_panel'].left * 2) + style['sim_panel'].width) / 2)
+        ((style['sim_panel'].top * 2) + style['sim_panel'].height) / 1.25)
+
+    thread_pool = ThreadPoolExecutor(max_workers=32)
 
     sim_time = 0
     sim_state = 'RUNNING'
 
 def logic():
+    global sim_time
+    global sim_state
+    global prev_state
+
     if sim_state == 'GEN_DONE':
         create_generation()
 
     elif sim_state == 'RUNNING':
-        sim_tick()
+        futures = []
+        for creature in generations[-1]:
+            futures.append(thread_pool.submit(update_creature, creature))
+        for f in futures:
+            f.result(5.0)
+
+        sim_time = sim_time + 1
+
+        if sim_time > ticks_per_gen:
+            if auto_gen:
+                sim_state = 'GEN_DONE'
+            else:
+                prev_state = 'GEN_DONE'
+                sim_state = 'PAUSED'
 
     elif sim_state == 'RESET':
         setup()
+
 
 def draw():
 
@@ -387,7 +393,8 @@ def draw():
         )
 
         name_text_surface = style['creature']['name_font'].render(
-            creature.name, True, style['black']
+            '{} #{}: {}'.format(creature.name, creature.number,'%.0f' % creature.fitness),
+            True, style['black']
         )
 
         screen.blit(
@@ -440,7 +447,6 @@ while carryOn:
                     if sim_state != 'PAUSED':
                         prev_state = sim_state
                         sim_state = 'PAUSED'
-                        pprint(generations[-1])
                     else:
                         sim_state = prev_state
                 if event.key == pygame.K_a:
@@ -449,9 +455,9 @@ while carryOn:
                     else:
                         auto_gen = True
                 if event.key == pygame.K_w:
-                    frameskip = frameskip + 1
+                    frameskip = frameskip * 2
                 if event.key == pygame.K_q:
-                    frameskip = frameskip - 1
+                    frameskip = max(math.floor(frameskip / 2), 1)
 
     except:
         log.debug('Can\'t get events, video system not initialised')

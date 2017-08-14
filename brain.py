@@ -5,8 +5,8 @@ from pprint import pprint
 
 class Neuron:
     saturation = 255
-    mutate_chance = 0.1
-    max_mutate = 2.0
+    mutate_chance = 0.3
+    max_mutate = 0.5
 
     def __init__(self, inputs, sigmoid, random_w):
         self.inputs = inputs
@@ -54,7 +54,7 @@ class Input:
 
 class Brain:
     def __init__(self,seed):
-        self.hiddenlayersize = 5
+        self.hiddenlayersize = 8
         self.layers = []
 
         random.seed(seed)
