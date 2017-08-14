@@ -1,5 +1,6 @@
 import random
 import math
+import time
 from pprint import pprint
 
 class Neuron:
