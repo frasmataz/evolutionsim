@@ -30,6 +30,8 @@ style['side_panel'] = pygame.Rect(
     style['main_window_size'][1] - (20 * 2)
 )
 
+style['target_rad'] = 25
+
 style['side_creature_name_height'] = 50
 style['side_creature_name_toppad'] = 10
 style['side_creature_name_font'] = pygame.font.SysFont('Andale Mono',72)
@@ -44,6 +46,7 @@ style['net_display_area'] = pygame.Rect(
 style['net_node_rad'] = 25
 style['net_node_hue'] = 324 # Pink
 style['net_node_spacing'] = (100,100)
+style['net_input_label'] = style['net_display_area'].left + 20
 
 # Creature
 style['creature'] = {

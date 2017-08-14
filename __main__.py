@@ -60,14 +60,15 @@ class Creature:
 
     def tick(self):
         output = self.brain.tick(
-            self.speed,
-            self.angle,
-            self.rspeed,
-            self.pos[0]-target[0],
-            self.pos[1]-target[1]
+            self.speed / self.max_speed,
+            self.angle / (math.pi*2),
+            self.rspeed / self.max_rspeed,
+            (self.pos[0]-target[0])/style['sim_panel'].width,
+            (self.pos[1]-target[1])/style['sim_panel'].height
         )
-        self.speed = output['speed']
-        self.rspeed = output['rspeed']
+
+        self.speed = output['speed'] * self.max_speed
+        self.rspeed = output['rspeed'] * self.max_rspeed
 
 def get_name():
     name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(6)])
@@ -111,21 +112,24 @@ def logic():
     # Update creature positions
     for creature in creatures:
         creature.tick()
-        creature.angle = creature.angle + (creature.rspeed * creature.max_rspeed)
-        creature.angle = creature.angle % (math.pi * 2)
-        creature.brain.mutate()
+        creature.angle = creature.angle + creature.rspeed
+        while creature.angle > (math.pi * 2):
+            creature.angle = creature.angle - (math.pi * 2)
+
+        while creature.angle < -(math.pi * 2):
+            creature.angle = creature.angle + (math.pi * 2)
 
         newpos = (
             min(
                 max(
-                    creature.pos[0] + (creature.speed * creature.max_speed * math.cos(creature.angle)),
+                    creature.pos[0] + (creature.speed * math.cos(creature.angle)),
                     bounding_rect.left
                 ),
                 bounding_rect.left + bounding_rect.width
             ),
             min(
                 max(
-                    creature.pos[1] + (creature.speed * creature.max_speed * math.sin(creature.angle)),
+                    creature.pos[1] + (creature.speed * math.sin(creature.angle)),
                     bounding_rect.top
                 ),
                 bounding_rect.top + bounding_rect.height
@@ -157,6 +161,14 @@ def draw():
         style['side_panel']
     )
 
+    # Draw target
+    pygame.draw.circle(
+        screen,
+        style['highlight2'],
+        (int(target[0]), int(target[1])),
+        style['net_node_rad']
+    )
+
     # Draw neural network display
     if selected_creature:
         sel_creature_name = style['side_creature_name_font'].render(
@@ -179,9 +191,6 @@ def draw():
             n = 1
             for neuron in layer:
                 ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
-                sat = min(neuron.value * 50, 100)
-                color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
-                color.hsva = (color.hsva[0], sat, color.hsva[2])
 
                 m = 1
                 for w in neuron.weights:
@@ -197,11 +206,44 @@ def draw():
                             xpos-(style['net_node_spacing'][0]),
                             inputy
                         ),
-                        int(abs(w))
+                        int(abs(w)*2)
                     )
                     m=m+1
                 n=n+1
             layern = layern+1
+
+        labelxpos = (style['net_input_label'])
+
+        # Draw labels on input
+        value_text_surface = style['creature']['name_font'].render('Speed', True, style['black'])
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*1))
+        )
+
+        value_text_surface = style['creature']['name_font'].render('Angle', True, style['black'])
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*2))
+        )
+        value_text_surface = style['creature']['name_font'].render('RSpeed', True, style['black'])
+
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*3))
+        )
+        value_text_surface = style['creature']['name_font'].render('XDiff', True, style['black'])
+
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*4))
+        )
+        value_text_surface = style['creature']['name_font'].render('YDiff', True, style['black'])
+
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*5))
+        )
 
         # Draw neurons
         layern = 0
@@ -209,10 +251,11 @@ def draw():
             xpos = (style['net_display_area'].left
                     + (style['net_display_area'].width/2)
                     + (style['net_node_spacing'][0]*(layern-1)))
+
             n = 1
             for neuron in layer:
                 ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
-                sat = min(neuron.value * 50, 100)
+                sat = min(abs(neuron.value) * 100, 100)
                 color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
                 color.hsva = (color.hsva[0], sat, color.hsva[2])
 
@@ -224,7 +267,7 @@ def draw():
                 )
 
                 value_text_surface = style['creature']['name_font'].render(
-                    '%.2f' % round(neuron.value,2), True, style['black']
+                    ('%.2f' % neuron.value), True, style['black']
                 )
 
                 screen.blit(

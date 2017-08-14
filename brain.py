@@ -2,22 +2,24 @@ import random
 import math
 from pprint import pprint
 
-def getiter(obj):
-    pprint(obj)
-    return obj.values() if isinstance(obj, dict) else obj
-
 class Neuron:
-    threshold = 0.5
+    saturation = 255
     mutate_chance = 0.1
     max_mutate = 2.0
 
-    def __init__(self, inputs):
+    def __init__(self, inputs, sigmoid, random_w):
         self.inputs = inputs
         self.weights = []
         self.value = 0.0
+        self.sigmoid = sigmoid
+        self.random_w = random_w
 
         for i in range(0, len(self.inputs)):
-            self.weights.append(random.uniform(-1.0,1.0))
+            if self.random_w:
+                self.weights.append(random.uniform(-2.0,2.0))
+            else:
+                self.weights.append(1.0)
+
 
     def decide(self):
         n = 0.0
@@ -25,17 +27,22 @@ class Neuron:
             n = n + (self.inputs[i].value * self.weights[i])
             # print('Input {}, weight {}, value {}'.format(self.inputs[i].value,self.weights[i],1 / (1 + math.exp(-n))))
 
-        self.value = 1 / (1 + math.exp(-n))
+        n = min(n,self.saturation)
+        n = max(n,-self.saturation)
+        if self.sigmoid:
+            self.value = 1 / (1 + math.exp(-n))
+            self.value = (self.value * 2) - 1.0
+        else:
+            self.value = (n / len(self.inputs))
 
     def mutate(self):
         for i in range(len(self.weights)):
             if random.uniform(0.0,1.0) < self.mutate_chance:
-                print('MUTATE')
                 self.weights[i] = self.weights[i] + random.uniform(-self.max_mutate,self.max_mutate)
 
     def set_inputs(self, value): # For input layer only
         for input in self.inputs:
-            input = value
+            input.value = float(value)
 
 class Input:
     def __init__(self):
@@ -53,25 +60,25 @@ class Brain:
 
         # Input layer - x, y, speed, angle, rspeed, xdiff, ydiff
         inputlayer = []
-        inputlayer.append(Neuron([Input()]))
-        inputlayer.append(Neuron([Input()]))
-        inputlayer.append(Neuron([Input()]))
-        inputlayer.append(Neuron([Input()]))
-        inputlayer.append(Neuron([Input()]))
+        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], False, False))
 
         self.layers.append(inputlayer)
 
         # Hidden layer
         hiddenlayer = []
         for i in range(0,self.hiddenlayersize):
-            hiddenlayer.append(Neuron(list(self.layers[0])))
+            hiddenlayer.append(Neuron(list(self.layers[0]), True, True))
 
         self.layers.append(hiddenlayer)
 
         # Output layer - speed, rspeed
         outputlayer = []
-        outputlayer.append(Neuron(self.layers[1]))
-        outputlayer.append(Neuron(self.layers[1]))
+        outputlayer.append(Neuron(self.layers[1], True, True))
+        outputlayer.append(Neuron(self.layers[1], True, True))
 
         self.layers.append(outputlayer)
 
@@ -83,7 +90,6 @@ class Brain:
         self.layers[0][4].set_inputs(ydiff)
 
         for n in self.layers[0]:
-            pprint(self.layers[0])
             n.decide()
 
         for n in self.layers[1]:
