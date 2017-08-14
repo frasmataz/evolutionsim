@@ -17,7 +17,7 @@ class Neuron:
         self.value = 0.0
 
         for i in range(0, len(self.inputs)):
-            self.weights.append(random.uniform(-0.1,0.1))
+            self.weights.append(random.uniform(-1.0,1.0))
 
     def decide(self):
         n = 0.0
@@ -99,5 +99,5 @@ class Brain:
 
     def mutate(self):
         for l in self.layers:
-            for n in getiter(l):
+            for n in l:
                 n.mutate()

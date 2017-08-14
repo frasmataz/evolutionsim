@@ -157,6 +157,7 @@ def draw():
         style['side_panel']
     )
 
+    # Draw neural network display
     if selected_creature:
         sel_creature_name = style['side_creature_name_font'].render(
             selected_creature.name, True, style['black']
@@ -169,8 +170,41 @@ def draw():
             style['side_panel'].top + style['side_creature_name_toppad'])
         )
 
+        # Draw synapses
         layern = 0
+        for layer in selected_creature.brain.layers:
+            xpos = (style['net_display_area'].left
+                    + (style['net_display_area'].width/2)
+                    + (style['net_node_spacing'][0]*(layern-1)))
+            n = 1
+            for neuron in layer:
+                ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
+                sat = min(neuron.value * 50, 100)
+                color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
+                color.hsva = (color.hsva[0], sat, color.hsva[2])
 
+                m = 1
+                for w in neuron.weights:
+                    if layern == 0:
+                        inputy = ypos
+                    else:
+                        inputy = style['net_display_area'].top + (style['net_node_spacing'][1]*m)
+                    pygame.draw.line(
+                        screen,
+                        style['white'] if w > 0 else style['black'],
+                        (xpos,ypos),
+                        (
+                            xpos-(style['net_node_spacing'][0]),
+                            inputy
+                        ),
+                        int(abs(w))
+                    )
+                    m=m+1
+                n=n+1
+            layern = layern+1
+
+        # Draw neurons
+        layern = 0
         for layer in selected_creature.brain.layers:
             xpos = (style['net_display_area'].left
                     + (style['net_display_area'].width/2)
@@ -188,26 +222,19 @@ def draw():
                     (int(xpos), int(ypos)),
                     style['net_node_rad']
                 )
-                n = n+1
 
-                m = 1
-                for w in neuron.weights:
-                    if layern == 0:
-                        inputy = ypos
-                    else:
-                        inputy = style['net_display_area'].top + (style['net_node_spacing'][1]*m)
-                    pygame.draw.line(
-                        screen,
-                        style['white'] if w > 0 else style['black'],
-                        (xpos,ypos),
-                        (
-                            xpos-(style['net_node_spacing'][0]),
-                            inputy
-                        ),
-                        int(abs(w) * 2)
-                    )
-                    m=m+1
-            layern = layern+1
+                value_text_surface = style['creature']['name_font'].render(
+                    '%.2f' % round(neuron.value,2), True, style['black']
+                )
+
+                screen.blit(
+                    value_text_surface,
+                    (xpos - (value_text_surface.get_width()/2),
+                    ypos - (value_text_surface.get_height()/2))
+                )
+
+                n=n+1
+            layern=layern+1
 
     # Draw creatures
     for creature in creatures:

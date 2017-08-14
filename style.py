@@ -43,7 +43,7 @@ style['net_display_area'] = pygame.Rect(
 
 style['net_node_rad'] = 25
 style['net_node_hue'] = 324 # Pink
-style['net_node_spacing'] = (80,80)
+style['net_node_spacing'] = (100,100)
 
 # Creature
 style['creature'] = {
