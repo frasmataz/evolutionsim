@@ -2,30 +2,36 @@ import random
 import math
 from pprint import pprint
 
+def getiter(obj):
+    pprint(obj)
+    return obj.values() if isinstance(obj, dict) else obj
+
 class Neuron:
     threshold = 0.5
     mutate_chance = 0.1
     max_mutate = 2.0
 
     def __init__(self, inputs):
-        self.inputs = []
+        self.inputs = inputs
         self.weights = []
         self.value = 0.0
 
         for i in range(0, len(self.inputs)):
-            self.weights.append(random.uniform(-2.0,2.0))
+            self.weights.append(random.uniform(-0.1,0.1))
 
     def decide(self):
         n = 0.0
         for i in range(0,len(self.inputs)):
             n = n + (self.inputs[i].value * self.weights[i])
+            # print('Input {}, weight {}, value {}'.format(self.inputs[i].value,self.weights[i],1 / (1 + math.exp(-n))))
 
         self.value = 1 / (1 + math.exp(-n))
 
     def mutate(self):
-        for weight in self.weights:
-            if random.uniform(0.0,1.0) < mutate_chance:
-                weight = weight + random.uniform(-max_mutate,max_mutate)
+        for i in range(len(self.weights)):
+            if random.uniform(0.0,1.0) < self.mutate_chance:
+                print('MUTATE')
+                self.weights[i] = self.weights[i] + random.uniform(-self.max_mutate,self.max_mutate)
 
     def set_inputs(self, value): # For input layer only
         for input in self.inputs:
@@ -58,7 +64,7 @@ class Brain:
         # Hidden layer
         hiddenlayer = []
         for i in range(0,self.hiddenlayersize):
-            hiddenlayer.append(Neuron(self.layers['input']))
+            hiddenlayer.append(Neuron(list(self.layers['input'].values())))
 
         self.layers['hidden'] = hiddenlayer
 
@@ -91,6 +97,6 @@ class Brain:
         }
 
     def mutate(self):
-        for l in self.layers:
-            for n in l:
+        for l in self.layers.values():
+            for n in getiter(l):
                 n.mutate()

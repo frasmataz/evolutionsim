@@ -24,9 +24,10 @@ carryOn = True
 
 # The clock will be used to control how fast the screen updates
 clock = pygame.time.Clock()
+selected_creature = None
 
-def dist(x1,x2,y1,y2):
-    return math.hypot(x2-x1,y2,y1)
+def dist(x1,y1,x2,y2):
+    return math.hypot(x2-x1,y2-y1)
 
 class Creature:
     max_speed = 4
@@ -112,8 +113,7 @@ def logic():
         creature.tick()
         creature.angle = creature.angle + (creature.rspeed * creature.max_rspeed)
         creature.angle = creature.angle % (math.pi * 2)
-
-
+        creature.brain.mutate()
 
         newpos = (
             min(
@@ -134,6 +134,13 @@ def logic():
 
         creature.pos = newpos
 
+def get_clicked_object(pos):
+    for creature in creatures:
+        x = dist(pos[0],pos[1],creature.pos[0],creature.pos[1])
+
+        if dist(pos[0],pos[1],creature.pos[0],creature.pos[1]) < style['creature']['radius']:
+            return creature
+
 def draw():
     #Flush background colour
     screen.fill(style['background_color'])
@@ -149,6 +156,96 @@ def draw():
         style['panel_color'],
         style['side_panel']
     )
+
+    if selected_creature:
+        sel_creature_name = style['side_creature_name_font'].render(
+            selected_creature.name, True, style['black']
+        )
+
+        screen.blit(
+            sel_creature_name,
+            (style['net_display_area'].left+(style['net_display_area'].width/2)
+                - (sel_creature_name.get_width()/2),
+            style['side_panel'].top + style['side_creature_name_toppad'])
+        )
+
+        xpos = style['net_display_area'].left + (style['net_display_area'].width/2) - style['net_node_spacing'][0]
+        n = 1
+        for k,v in selected_creature.brain.layers['input'].items():
+            ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
+            sat = min(v.value * 50, 100)
+            color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
+            color.hsva = (color.hsva[0], sat, color.hsva[2])
+
+            pygame.draw.circle(
+                screen,
+                color,
+                (int(xpos), int(ypos)),
+                style['net_node_rad']
+            )
+            n = n+1
+
+        xpos = style['net_display_area'].left + (style['net_display_area'].width/2)
+        n = 1
+        for i in selected_creature.brain.layers['hidden']:
+            ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
+            sat = min(v.value * 50, 100)
+            color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
+            color.hsva = (color.hsva[0], sat, color.hsva[2])
+
+            pygame.draw.circle(
+                screen,
+                color,
+                (int(xpos), int(ypos)),
+                style['net_node_rad']
+            )
+
+            m = 1
+            for w in i.weights:
+                pygame.draw.line(
+                    screen,
+                    style['white'] if w > 0 else style['black'],
+                    (xpos,ypos),
+                    (
+                        xpos-(style['net_node_spacing'][0]),
+                        style['net_display_area'].top + (style['net_node_spacing'][1]*m)
+                    ),
+                    int(abs(i.value) * 10)
+                )
+                m=m+1
+
+            n = n+1
+
+        xpos = style['net_display_area'].left + (style['net_display_area'].width/2) + style['net_node_spacing'][0]
+        n = 1
+        for k,v in selected_creature.brain.layers['output'].items():
+            ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
+            sat = min(v.value * 50, 100)
+            color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
+            color.hsva = (color.hsva[0], sat, color.hsva[2])
+
+            pygame.draw.circle(
+                screen,
+                color,
+                (int(xpos), int(ypos)),
+                style['net_node_rad']
+            )
+
+            m = 1
+            for w in i.weights:
+                pygame.draw.line(
+                    screen,
+                    style['white'] if w > 0 else style['black'],
+                    (xpos,ypos),
+                    (
+                        xpos-(style['net_node_spacing'][0]),
+                        style['net_display_area'].top + (style['net_node_spacing'][1]*m)
+                    ),
+                    int(abs(i.value) * 10)
+                )
+                m=m+1
+
+            n = n+1
 
     # Draw creatures
     for creature in creatures:
@@ -198,6 +295,13 @@ while carryOn:
         for event in pygame.event.get():  # User did something
             if event.type == pygame.QUIT:  # If user clicked close
                 carryOn = False  # Flag that we are done so we exit this loop
+            if event.type == pygame.MOUSEBUTTONUP:
+                obj = get_clicked_object(pygame.mouse.get_pos())
+                if obj:
+                    selected_creature = obj
+                else:
+                    selected_creature = None
+
     except:
         log.debug('Can\'t get events, video system not initialised')
 
