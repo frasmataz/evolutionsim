@@ -169,83 +169,45 @@ def draw():
             style['side_panel'].top + style['side_creature_name_toppad'])
         )
 
-        xpos = style['net_display_area'].left + (style['net_display_area'].width/2) - style['net_node_spacing'][0]
-        n = 1
-        for k,v in selected_creature.brain.layers['input'].items():
-            ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
-            sat = min(v.value * 50, 100)
-            color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
-            color.hsva = (color.hsva[0], sat, color.hsva[2])
+        layern = 0
 
-            pygame.draw.circle(
-                screen,
-                color,
-                (int(xpos), int(ypos)),
-                style['net_node_rad']
-            )
-            n = n+1
+        for layer in selected_creature.brain.layers:
+            xpos = (style['net_display_area'].left
+                    + (style['net_display_area'].width/2)
+                    + (style['net_node_spacing'][0]*(layern-1)))
+            n = 1
+            for neuron in layer:
+                ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
+                sat = min(neuron.value * 50, 100)
+                color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
+                color.hsva = (color.hsva[0], sat, color.hsva[2])
 
-        xpos = style['net_display_area'].left + (style['net_display_area'].width/2)
-        n = 1
-        for i in selected_creature.brain.layers['hidden']:
-            ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
-            sat = min(v.value * 50, 100)
-            color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
-            color.hsva = (color.hsva[0], sat, color.hsva[2])
-
-            pygame.draw.circle(
-                screen,
-                color,
-                (int(xpos), int(ypos)),
-                style['net_node_rad']
-            )
-
-            m = 1
-            for w in i.weights:
-                pygame.draw.line(
+                pygame.draw.circle(
                     screen,
-                    style['white'] if w > 0 else style['black'],
-                    (xpos,ypos),
-                    (
-                        xpos-(style['net_node_spacing'][0]),
-                        style['net_display_area'].top + (style['net_node_spacing'][1]*m)
-                    ),
-                    int(abs(i.value) * 10)
+                    color,
+                    (int(xpos), int(ypos)),
+                    style['net_node_rad']
                 )
-                m=m+1
+                n = n+1
 
-            n = n+1
-
-        xpos = style['net_display_area'].left + (style['net_display_area'].width/2) + style['net_node_spacing'][0]
-        n = 1
-        for k,v in selected_creature.brain.layers['output'].items():
-            ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
-            sat = min(v.value * 50, 100)
-            color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])
-            color.hsva = (color.hsva[0], sat, color.hsva[2])
-
-            pygame.draw.circle(
-                screen,
-                color,
-                (int(xpos), int(ypos)),
-                style['net_node_rad']
-            )
-
-            m = 1
-            for w in i.weights:
-                pygame.draw.line(
-                    screen,
-                    style['white'] if w > 0 else style['black'],
-                    (xpos,ypos),
-                    (
-                        xpos-(style['net_node_spacing'][0]),
-                        style['net_display_area'].top + (style['net_node_spacing'][1]*m)
-                    ),
-                    int(abs(i.value) * 10)
-                )
-                m=m+1
-
-            n = n+1
+                m = 1
+                for w in neuron.weights:
+                    if layern == 0:
+                        inputy = ypos
+                    else:
+                        inputy = style['net_display_area'].top + (style['net_node_spacing'][1]*m)
+                    pygame.draw.line(
+                        screen,
+                        style['white'] if w > 0 else style['black'],
+                        (xpos,ypos),
+                        (
+                            xpos-(style['net_node_spacing'][0]),
+                            inputy
+                        ),
+                        int(abs(w) * 2)
+                    )
+                    m=m+1
+            layern = layern+1
 
     # Draw creatures
     for creature in creatures:

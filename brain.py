@@ -47,56 +47,57 @@ class Input:
 class Brain:
     def __init__(self,seed):
         self.hiddenlayersize = 5
-        self.layers = {}
+        self.layers = []
 
         random.seed(seed)
 
         # Input layer - x, y, speed, angle, rspeed, xdiff, ydiff
-        inputlayer = {}
-        inputlayer['speed'] = Neuron([Input()])
-        inputlayer['angle'] = Neuron([Input()])
-        inputlayer['rspeed'] = Neuron([Input()])
-        inputlayer['xdiff'] = Neuron([Input()])
-        inputlayer['ydiff'] = Neuron([Input()])
+        inputlayer = []
+        inputlayer.append(Neuron([Input()]))
+        inputlayer.append(Neuron([Input()]))
+        inputlayer.append(Neuron([Input()]))
+        inputlayer.append(Neuron([Input()]))
+        inputlayer.append(Neuron([Input()]))
 
-        self.layers['input'] = inputlayer
+        self.layers.append(inputlayer)
 
         # Hidden layer
         hiddenlayer = []
         for i in range(0,self.hiddenlayersize):
-            hiddenlayer.append(Neuron(list(self.layers['input'].values())))
+            hiddenlayer.append(Neuron(list(self.layers[0])))
 
-        self.layers['hidden'] = hiddenlayer
+        self.layers.append(hiddenlayer)
 
         # Output layer - speed, rspeed
-        outputlayer = {}
-        outputlayer['speed'] = Neuron(self.layers['hidden'])
-        outputlayer['rspeed'] = Neuron(self.layers['hidden'])
+        outputlayer = []
+        outputlayer.append(Neuron(self.layers[1]))
+        outputlayer.append(Neuron(self.layers[1]))
 
-        self.layers['output'] = outputlayer
+        self.layers.append(outputlayer)
 
     def tick(self,speed,angle,rspeed,xdiff,ydiff):
-        self.layers['input']['speed'].set_inputs(speed)
-        self.layers['input']['angle'].set_inputs(angle)
-        self.layers['input']['rspeed'].set_inputs(rspeed)
-        self.layers['input']['xdiff'].set_inputs(xdiff)
-        self.layers['input']['ydiff'].set_inputs(ydiff)
+        self.layers[0][0].set_inputs(speed)
+        self.layers[0][1].set_inputs(angle)
+        self.layers[0][2].set_inputs(rspeed)
+        self.layers[0][3].set_inputs(xdiff)
+        self.layers[0][4].set_inputs(ydiff)
 
-        for k,v in self.layers['input'].items():
-            v.decide()
-
-        for n in self.layers['hidden']:
+        for n in self.layers[0]:
+            pprint(self.layers[0])
             n.decide()
 
-        for k,v in self.layers['output'].items():
-            v.decide()
+        for n in self.layers[1]:
+            n.decide()
+
+        for n in self.layers[2]:
+            n.decide()
 
         return {
-            'speed': self.layers['output']['speed'].value,
-            'rspeed': self.layers['output']['rspeed'].value
+            'speed': self.layers[2][0].value,
+            'rspeed': self.layers[2][1].value
         }
 
     def mutate(self):
-        for l in self.layers.values():
+        for l in self.layers:
             for n in getiter(l):
                 n.mutate()
