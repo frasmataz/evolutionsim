@@ -15,10 +15,11 @@ log.setLevel(logging.DEBUG)
 
 # Program parameters
 target_population = 80
-killed_per_gen = 40
+killed_per_gen = 20
 ticks_per_gen = 300
 auto_gen = True
 frameskip = 1
+max_fitness_per_tick = 500
 
 # Initialise pygame
 pygame.init()
@@ -84,7 +85,7 @@ class Creature:
 
         progress_sign = 1 if progress >= 0.0 else -1
 
-        self.fitness = self.fitness + (math.pow(progress,2)*progress_sign)
+        self.fitness = self.fitness + min((math.pow(progress,2)*progress_sign),max_fitness_per_tick)
 
         self.speed = output['speed'] * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
@@ -136,7 +137,7 @@ def update_creature(creature):
         )
     )
     creature.pos = newpos
-    return creature
+    return creature.fitness
 
 
 def create_generation():
@@ -150,20 +151,38 @@ def create_generation():
     new_gen = []
 
     for i in range(0, killed_per_gen):
-        parent = last_gen[i]
+        parent = copy.deepcopy(last_gen[i])
         parent.mutate()
         parent.reset()
-        new_gen.append(copy.deepcopy(parent))
+        new_gen.append(parent)
 
     for i in range(0, target_population - killed_per_gen):
-        creature = last_gen[i]
+        creature = copy.deepcopy(last_gen[i])
         creature.reset()
-        new_gen.append(copy.deepcopy(creature))
+        new_gen.append(creature)
 
     generations.append(new_gen)
 
     sim_time = 0
     sim_state = 'RUNNING'
+
+def interp(left_min, left_max, right_min, right_max):
+    # Figure out how 'wide' each range is
+    leftSpan = left_max - left_min
+    rightSpan = right_max - right_min
+
+    # Compute the scale factor between left and right values
+    scaleFactor = float(rightSpan) / float(leftSpan)
+
+    # create interpolation function using pre-calculated scaleFactor
+    def interp_fn(value):
+        if value > 0:
+            value = math.sqrt(value)
+        elif value < 0:
+            value = -(math.sqrt(-value))
+        return right_min + (value-left_min)*scaleFactor
+
+    return interp_fn
 
 def setup():
     global bounding_rect
@@ -174,10 +193,12 @@ def setup():
     global sim_time
     global sim_state
     global thread_pool
+    global max_fitness
 
     selected_creature = None
     info_text = ''
     generations = []
+    max_fitness = 0.0
 
     bounding_rect = pygame.Rect(
         style['sim_panel'].left + style['creature']['radius'],
@@ -216,6 +237,7 @@ def logic():
     global sim_time
     global sim_state
     global prev_state
+    global max_fitness
 
     if sim_state == 'GEN_DONE':
         create_generation()
@@ -225,7 +247,9 @@ def logic():
         for creature in generations[-1]:
             futures.append(thread_pool.submit(update_creature, creature))
         for f in futures:
-            f.result(5.0)
+            fit = f.result(5.0)
+            if fit > max_fitness:
+                max_fitness = fit
 
         sim_time = sim_time + 1
 
@@ -264,6 +288,65 @@ def draw():
         (int(target[0]), int(target[1])),
         style['net_node_rad']
     )
+
+    # Draw trend_graph
+    screen.fill(
+        style['white'],
+        style['trend_graph']
+    )
+
+    lastmax = (style['trend_graph'].left,style['trend_graph'].top+style['trend_graph'].height)
+    lastmed = lastmax
+    lastmin = lastmax
+
+    i = 0
+
+    scale = interp(0.0, math.sqrt(max(0.1,max_fitness)), 0.0, style['trend_graph'].height)
+
+    for g in generations:
+        g.sort(key=lambda c: c.fitness, reverse=True)
+        maxfit = g[0].fitness
+        medfit = g[math.floor(target_population/2)].fitness
+        minfit = g[target_population-1].fitness
+
+        xpos = style['trend_graph'].left + (
+            (style['trend_graph'].width / len(generations)) * (i+1)
+        )
+        ypos = style['trend_graph'].top + style['trend_graph'].height
+
+        maxpos = (xpos,ypos-scale(maxfit))
+        medpos = (xpos,ypos-scale(medfit))
+        minpos = (xpos,ypos-scale(minfit))
+
+
+        pygame.draw.line(
+            screen,
+            style['black'],
+            maxpos,
+            lastmax,
+            1
+        )
+        pygame.draw.line(
+            screen,
+            style['black'],
+            medpos,
+            lastmed,
+            1
+        )
+        pygame.draw.line(
+            screen,
+            style['black'],
+            minpos,
+            lastmin,
+            1
+        )
+        lastmax = maxpos
+        lastmed = medpos
+        lastmin = minpos
+        i=i+1
+
+
+
 
     # Draw neural network display
     if selected_creature:
@@ -431,14 +514,15 @@ def draw():
         )
 
     # Draw log text
-    log_text = ('Generation: {} || Sim ticks: {} / {} || Sim state: {} || Population: {} || Autogen: {} || Skip: {}'.format(
+    log_text = ('Generation: {} || Sim ticks: {} / {} || Sim state: {} || Population: {} || Autogen: {} || Skip: {} || Maxfit: {}'.format(
         len(generations),
         sim_time,
         ticks_per_gen,
         sim_state,
         len(generations[-1]),
         auto_gen,
-        frameskip
+        frameskip,
+        max_fitness
     ))
 
     log_text_surface = style['creature']['name_font'].render(

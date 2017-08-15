@@ -30,6 +30,14 @@ style['side_panel'] = pygame.Rect(
     style['main_window_size'][1] - (20 * 2)
 )
 
+style['trend_graph_height'] = 200
+style['trend_graph']= pygame.Rect(
+    style['side_panel'].left,
+    style['side_panel'].top + style['side_panel'].height - style['trend_graph_height'],
+    style['side_panel'].width,
+    style['trend_graph_height']
+)
+
 style['target_rad'] = 25
 
 style['side_creature_name_height'] = 50
