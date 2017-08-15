@@ -5,7 +5,7 @@ from pprint import pprint
 
 class Neuron:
     saturation = 255
-    mutate_chance = 0.3
+    mutate_chance = 0.5
     max_mutate = 0.5
 
     def __init__(self, inputs, sigmoid, random_w):
@@ -59,8 +59,11 @@ class Brain:
 
         random.seed(seed)
 
-        # Input layer - x, y, speed, angle, rspeed, xdiff, ydiff
+        # Input layer - speed, sin(a), cos(a), rspeed, xdiff, ydiff, 0, 1
         inputlayer = []
+        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], False, False))
         inputlayer.append(Neuron([Input()], False, False))
         inputlayer.append(Neuron([Input()], False, False))
         inputlayer.append(Neuron([Input()], False, False))
@@ -83,12 +86,15 @@ class Brain:
 
         self.layers.append(outputlayer)
 
-    def tick(self,speed,angle,rspeed,xdiff,ydiff):
+    def tick(self,speed,sina,cosa,rspeed,xdiff,ydiff):
         self.layers[0][0].set_inputs(speed)
-        self.layers[0][1].set_inputs(angle)
-        self.layers[0][2].set_inputs(rspeed)
-        self.layers[0][3].set_inputs(xdiff)
-        self.layers[0][4].set_inputs(ydiff)
+        self.layers[0][1].set_inputs(sina)
+        self.layers[0][2].set_inputs(cosa)
+        self.layers[0][3].set_inputs(rspeed)
+        self.layers[0][4].set_inputs(xdiff)
+        self.layers[0][5].set_inputs(ydiff)
+        self.layers[0][6].set_inputs(0.0)
+        self.layers[0][7].set_inputs(1.0)
 
         for n in self.layers[0]:
             n.decide()
@@ -105,6 +111,9 @@ class Brain:
         }
 
     def mutate(self):
+        i = 0
         for l in self.layers:
             for n in l:
-                n.mutate()
+                if i > 0:
+                    n.mutate()
+            i = i + 1

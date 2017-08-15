@@ -14,9 +14,9 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-target_population = 60
-killed_per_gen = 5
-ticks_per_gen = 500
+target_population = 80
+killed_per_gen = 40
+ticks_per_gen = 300
 auto_gen = True
 frameskip = 1
 
@@ -65,27 +65,37 @@ class Creature:
         )
         self.speed = 0.0
         self.rspeed = 0.0
-        self.angle = 0.0
+        self.angle = math.pi
         self.fitness = 0.0
         self.start_pos = self.pos
 
     def tick(self):
         output = self.brain.tick(
             self.speed / self.max_speed,
-            self.angle / (math.pi*2),
+            math.sin(self.angle),
+            math.cos(self.angle),
             self.rspeed / self.max_rspeed,
             (self.pos[0]-target[0])/style['sim_panel'].width,
             (self.pos[1]-target[1])/style['sim_panel'].height
         )
 
-        self.fitness = self.fitness + (dist(self.start_pos[0], self.start_pos[1], target[0], target[1]) /
+        progress = (dist(self.start_pos[0], self.start_pos[1], target[0], target[1]) /
             dist(self.pos[0], self.pos[1], target[0], target[1]) - 1)
+
+        progress_sign = 1 if progress >= 0.0 else -1
+
+        self.fitness = self.fitness + (math.pow(progress,2)*progress_sign)
 
         self.speed = output['speed'] * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
 
     def mutate(self):
         self.number  = self.number + 1
+        oldcolor = self.color.hsva
+        self.color.hsva = (
+            (oldcolor[0] + random.randint(-5,5)) % 360,
+            oldcolor[1], oldcolor[2]
+        )
         self.brain.mutate()
 
 def get_name():
@@ -197,7 +207,7 @@ def setup():
     target = (((style['sim_panel'].left * 2) + style['sim_panel'].width) / 2,
         ((style['sim_panel'].top * 2) + style['sim_panel'].height) / 1.25)
 
-    thread_pool = ThreadPoolExecutor(max_workers=32)
+    thread_pool = ThreadPoolExecutor(max_workers=8)
 
     sim_time = 0
     sim_state = 'RUNNING'
@@ -307,28 +317,45 @@ def draw():
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*1))
         )
 
-        value_text_surface = style['creature']['name_font'].render('Angle', True, style['black'])
+        value_text_surface = style['creature']['name_font'].render('sin(a)', True, style['black'])
         screen.blit(
             value_text_surface,
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*2))
+        )
+        value_text_surface = style['creature']['name_font'].render('cos(a)', True, style['black'])
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*3))
         )
         value_text_surface = style['creature']['name_font'].render('RSpeed', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*3))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*4))
         )
         value_text_surface = style['creature']['name_font'].render('XDiff', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*4))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*5))
         )
         value_text_surface = style['creature']['name_font'].render('YDiff', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*5))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*6))
+        )
+        value_text_surface = style['creature']['name_font'].render('0', True, style['black'])
+
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*7))
+        )
+        value_text_surface = style['creature']['name_font'].render('1', True, style['black'])
+
+        screen.blit(
+            value_text_surface,
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*8))
         )
 
         # Draw neurons
