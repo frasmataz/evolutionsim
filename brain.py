@@ -5,6 +5,9 @@ from pprint import pprint
 
 class Neuron:
     saturation = 255
+    delete_chance = 0.0
+    replace_chance = 0.0
+    max_replace = 2.0
     mutate_chance = 0.5
     max_mutate = 0.5
 
@@ -41,6 +44,12 @@ class Neuron:
             if random.uniform(0.0,1.0) < self.mutate_chance:
                 self.weights[i] = self.weights[i] + random.uniform(-self.max_mutate,self.max_mutate)
 
+            if random.uniform(0.0,1.0) < self.delete_chance:
+                self.weights[i] = 0.0
+
+            if random.uniform(0.0,1.0) < self.replace_chance:
+                self.weights[i] = random.uniform(-self.max_replace,self.max_replace)
+
     def set_inputs(self, value): # For input layer only
         for input in self.inputs:
             input.value = float(value)
@@ -54,7 +63,8 @@ class Input:
 
 class Brain:
     def __init__(self,seed):
-        self.hiddenlayersize = 8
+        self.hiddenlayersize = 6
+        self.hiddenlayers = 1
         self.layers = []
 
         random.seed(seed)
@@ -72,17 +82,18 @@ class Brain:
 
         self.layers.append(inputlayer)
 
-        # Hidden layer
-        hiddenlayer = []
-        for i in range(0,self.hiddenlayersize):
-            hiddenlayer.append(Neuron(list(self.layers[0]), True, True))
+        for i in range(0,self.hiddenlayers):
+            # Hidden layer
+            hiddenlayer = []
+            for j in range(0,self.hiddenlayersize):
+                hiddenlayer.append(Neuron(list(self.layers[len(self.layers)-1]), True, True))
 
-        self.layers.append(hiddenlayer)
+            self.layers.append(hiddenlayer)
 
         # Output layer - speed, rspeed
         outputlayer = []
-        outputlayer.append(Neuron(self.layers[1], True, True))
-        outputlayer.append(Neuron(self.layers[1], True, True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
 
         self.layers.append(outputlayer)
 
@@ -96,18 +107,13 @@ class Brain:
         self.layers[0][6].set_inputs(0.0)
         self.layers[0][7].set_inputs(1.0)
 
-        for n in self.layers[0]:
-            n.decide()
-
-        for n in self.layers[1]:
-            n.decide()
-
-        for n in self.layers[2]:
-            n.decide()
+        for l in self.layers:
+            for n in l:
+                n.decide()
 
         return {
-            'speed': self.layers[2][0].value,
-            'rspeed': self.layers[2][1].value
+            'speed': self.layers[len(self.layers)-1][0].value,
+            'rspeed': self.layers[len(self.layers)-1][1].value
         }
 
     def mutate(self):

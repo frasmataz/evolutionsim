@@ -14,8 +14,8 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-target_population = 80
-killed_per_gen = 20
+target_population = 100
+killed_per_gen = 30
 ticks_per_gen = 300
 auto_gen = True
 frameskip = 1
@@ -47,7 +47,7 @@ class Creature:
         color = pygame.Color(0,0,0)
         color.hsva = (
             (random.randint(0,240)+180)%360,
-            random.randint(20,99),
+            random.randint(40,99),
             random.randint(40,99)
         )
         self.color = color
@@ -87,14 +87,14 @@ class Creature:
 
         self.fitness = self.fitness + min((math.pow(progress,2)*progress_sign),max_fitness_per_tick)
 
-        self.speed = output['speed'] * self.max_speed
+        self.speed = max(0.0,output['speed']) * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
 
     def mutate(self):
         self.number  = self.number + 1
         oldcolor = self.color.hsva
         self.color.hsva = (
-            (oldcolor[0] + random.randint(-5,5)) % 360,
+            (oldcolor[0] + random.randint(-15,15)) % 359,
             oldcolor[1], oldcolor[2]
         )
         self.brain.mutate()
@@ -500,6 +500,15 @@ def draw():
             (int(creature.pos[0]), int(creature.pos[1])),
             style['creature']['radius'],
             2
+        )
+
+
+        pygame.draw.circle(
+            screen,
+            border_color,
+            (int(creature.pos[0]+(math.cos(creature.angle)*style['creature']['radius'])),
+            int(creature.pos[1]+(math.sin(creature.angle)*style['creature']['radius']))),
+            math.floor(style['creature']['radius']/2)
         )
 
         name_text_surface = style['creature']['name_font'].render(
