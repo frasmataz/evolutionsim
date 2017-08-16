@@ -4,6 +4,7 @@ import random
 import string
 import math
 import copy
+import pickle
 from concurrent.futures import ThreadPoolExecutor
 from style import style
 from pprint import pprint
@@ -14,12 +15,14 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
+generationspersave = 10
 target_population = 100
 killed_per_gen = 30
 ticks_per_gen = 300
 auto_gen = True
 frameskip = 1
 max_fitness_per_tick = 500
+filename = 'creatures.pkl'
 
 # Initialise pygame
 pygame.init()
@@ -41,6 +44,7 @@ class Creature:
     max_rspeed = 0.3
 
     def __init__(self, name):
+        random.seed(name)
         self.reset()
         self.name = name
         self.number = 0
@@ -61,12 +65,12 @@ class Creature:
             ),
             random.uniform(
                 bounding_rect.top,
-                bounding_rect.top + (bounding_rect.height/2)
+                bounding_rect.top + (bounding_rect.height)
             ),
         )
         self.speed = 0.0
         self.rspeed = 0.0
-        self.angle = math.pi
+        self.angle = math.pi/2
         self.fitness = 0.0
         self.start_pos = self.pos
 
@@ -110,6 +114,14 @@ def get_clicked_object(pos):
         if dist(pos[0],pos[1],creature.pos[0],creature.pos[1]) < style['creature']['radius']:
             return creature
 
+def savecreatures(filename, creatures):
+    with open(filename, 'wb') as output:
+        pickle.dump(creatures, output, pickle.HIGHEST_PROTOCOL)
+
+def loadcreatures(filename):
+    with open(filename, 'rb') as input:
+        return pickle.load(input)
+
 def update_creature(creature):
     # Update creature positions
     creature.tick()
@@ -143,6 +155,8 @@ def update_creature(creature):
 def create_generation():
     global sim_time
     global sim_state
+    global target
+
 
     last_gen = generations[-1]
 
@@ -162,6 +176,20 @@ def create_generation():
         new_gen.append(creature)
 
     generations.append(new_gen)
+
+    if len(generations) % generationspersave == 0:
+        savecreatures(filename,generations)
+
+    target = (
+        random.randint(
+            bounding_rect.left,
+            bounding_rect.left + bounding_rect.width
+        ),
+        random.randint(
+            bounding_rect.top,
+            bounding_rect.top + bounding_rect.height
+        )
+    )
 
     sim_time = 0
     sim_state = 'RUNNING'
@@ -207,26 +235,17 @@ def setup():
         style['sim_panel'].height - (style['creature']['radius'] * 2)
     )
 
-    creatures = []
-    for i in range(0,target_population):
-        new_creature_name = get_name()
-        creatures.append(Creature(new_creature_name))
+    try:
+        generations = loadcreatures(filename)
+    except:
+        creatures = []
+        for i in range(0,target_population):
+            new_creature_name = get_name()
+            creatures.append(Creature(new_creature_name))
 
-    generations.append(creatures)
+        generations.append(creatures)
 
-    # target = (
-    #     random.randint(
-    #         bounding_rect.left,
-    #         bounding_rect.left + bounding_rect.width
-    #     ),
-    #     random.randint(
-    #         bounding_rect.top,
-    #         bounding_rect.top + bounding_rect.height
-    #     )
-    # )
-
-    target = (((style['sim_panel'].left * 2) + style['sim_panel'].width) / 2,
-        ((style['sim_panel'].top * 2) + style['sim_panel'].height) / 1.25)
+    target = (0,0)
 
     thread_pool = ThreadPoolExecutor(max_workers=8)
 
