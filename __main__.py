@@ -16,8 +16,8 @@ log.setLevel(logging.DEBUG)
 
 # Program parameters
 generationspersave = 10
-target_population = 100
-killed_per_gen = 30
+target_population = 60
+killed_per_gen = 10
 ticks_per_gen = 300
 auto_gen = True
 frameskip = 1
@@ -49,11 +49,6 @@ class Creature:
         self.name = name
         self.number = 0
         color = pygame.Color(0,0,0)
-        color.hsva = (
-            (random.randint(0,240)+180)%360,
-            random.randint(40,99),
-            random.randint(40,99)
-        )
         self.color = color
         self.brain = brain.Brain(self.name)
 
@@ -93,14 +88,11 @@ class Creature:
 
         self.speed = max(0.0,output['speed']) * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
+        rgb = tuple([math.floor((x*128)+128) for x in output['rgb']])
+        self.color = pygame.Color(rgb[0],rgb[1],rgb[2])
 
     def mutate(self):
         self.number  = self.number + 1
-        oldcolor = self.color.hsva
-        self.color.hsva = (
-            (oldcolor[0] + random.randint(-15,15)) % 359,
-            oldcolor[1], oldcolor[2]
-        )
         self.brain.mutate()
 
 def get_name():
@@ -190,6 +182,8 @@ def create_generation():
             bounding_rect.top + bounding_rect.height
         )
     )
+
+    target = (bounding_rect.left + bounding_rect.width/2,bounding_rect.top + bounding_rect.height/2)
 
     sim_time = 0
     sim_state = 'RUNNING'
@@ -511,7 +505,11 @@ def draw():
         )
 
         border_color = pygame.Color(0,0,0,0)
-        border_color.hsva = hsv
+
+        try:
+            border_color.hsva = hsv
+        except:
+            print(hsv)
 
         pygame.draw.circle(
             screen,

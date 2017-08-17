@@ -5,8 +5,8 @@ from pprint import pprint
 
 class Neuron:
     saturation = 255
-    delete_chance = 0.0
-    replace_chance = 0.0
+    delete_chance = 0.01
+    replace_chance = 0.01
     max_replace = 2.0
     mutate_chance = 0.5
     max_mutate = 0.5
@@ -63,8 +63,8 @@ class Input:
 
 class Brain:
     def __init__(self,seed):
-        self.hiddenlayersize = 6
-        self.hiddenlayers = 1
+        self.hiddenlayersize = 5
+        self.hiddenlayers = 2
         self.layers = []
 
         random.seed(seed)
@@ -90,8 +90,11 @@ class Brain:
 
             self.layers.append(hiddenlayer)
 
-        # Output layer - speed, rspeed
+        # Output layer - speed, rspeed, r, g, b
         outputlayer = []
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
         outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
         outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
 
@@ -113,7 +116,10 @@ class Brain:
 
         return {
             'speed': self.layers[len(self.layers)-1][0].value,
-            'rspeed': self.layers[len(self.layers)-1][1].value
+            'rspeed': self.layers[len(self.layers)-1][1].value,
+            'rgb': (self.layers[len(self.layers)-1][2].value,
+                  self.layers[len(self.layers)-1][3].value,
+                  self.layers[len(self.layers)-1][4].value)
         }
 
     def mutate(self):
