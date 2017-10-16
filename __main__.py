@@ -53,6 +53,7 @@ class Creature:
         self.brain = brain.Brain(self.name)
 
     def reset(self):
+        # Choose a random starting position within play area
         self.pos = (
             random.uniform(
                 bounding_rect.left,
@@ -63,6 +64,8 @@ class Creature:
                 bounding_rect.top + (bounding_rect.height)
             ),
         )
+
+        # Reset variables
         self.speed = 0.0
         self.rspeed = 0.0
         self.angle = math.pi/2
@@ -70,6 +73,7 @@ class Creature:
         self.start_pos = self.pos
 
     def tick(self):
+        # Tick the brain one step
         output = self.brain.tick(
             self.speed / self.max_speed,
             math.sin(self.angle),
@@ -78,14 +82,17 @@ class Creature:
             (self.pos[0]-target[0])/style['sim_panel'].width,
             (self.pos[1]-target[1])/style['sim_panel'].height
         )
-
+        
+        # Find progress towards the goal
         progress = (dist(self.start_pos[0], self.start_pos[1], target[0], target[1]) /
             dist(self.pos[0], self.pos[1], target[0], target[1]) - 1)
 
         progress_sign = 1 if progress >= 0.0 else -1
 
+        # Determine fitness
         self.fitness = self.fitness + min((math.pow(progress,2)*progress_sign),max_fitness_per_tick)
 
+        # Update velocity and colour
         self.speed = max(0.0,output['speed']) * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
         rgb = tuple([math.floor((x*128)+128) for x in output['rgb']])
@@ -115,8 +122,10 @@ def loadcreatures(filename):
         return pickle.load(input)
 
 def update_creature(creature):
-    # Update creature positions
+    # Tick the creature
     creature.tick()
+
+    # Use creature's velocities to update angle and position
     creature.angle = creature.angle + creature.rspeed
     while creature.angle > (math.pi * 2):
         creature.angle = creature.angle - (math.pi * 2)
@@ -141,6 +150,8 @@ def update_creature(creature):
         )
     )
     creature.pos = newpos
+
+    # Return the creature's current fitness
     return creature.fitness
 
 
@@ -149,29 +160,34 @@ def create_generation():
     global sim_state
     global target
 
-
+    # Take previous generation, and sort them by fitness.
     last_gen = generations[-1]
-
     last_gen.sort(key=lambda c: c.fitness, reverse=True)
 
     new_gen = []
 
+    # Take the most fit X creatures, copy them, and mutate the children.
+    # Move old creatures and children into next generation.
     for i in range(0, killed_per_gen):
         parent = copy.deepcopy(last_gen[i])
         parent.mutate()
         parent.reset()
         new_gen.append(parent)
 
+    # Move all but the least fit X creatures into the next generation.
     for i in range(0, target_population - killed_per_gen):
         creature = copy.deepcopy(last_gen[i])
         creature.reset()
         new_gen.append(creature)
 
+    # Add this generation to history.
     generations.append(new_gen)
 
+    # Check if it's time for us to save generations to file.
     if len(generations) % generationspersave == 0:
         savecreatures(filename,generations)
 
+    # Move target randomly
     target = (
         random.randint(
             bounding_rect.left,
@@ -182,9 +198,11 @@ def create_generation():
             bounding_rect.top + bounding_rect.height
         )
     )
-
+    
+    # Move target to the centre of the play area
     target = (bounding_rect.left + bounding_rect.width/2,bounding_rect.top + bounding_rect.height/2)
 
+    # Reset simulation
     sim_time = 0
     sim_state = 'RUNNING'
 
@@ -222,6 +240,7 @@ def setup():
     generations = []
     max_fitness = 0.0
 
+    # Find play area
     bounding_rect = pygame.Rect(
         style['sim_panel'].left + style['creature']['radius'],
         style['sim_panel'].top + style['creature']['radius'],
@@ -229,6 +248,7 @@ def setup():
         style['sim_panel'].height - (style['creature']['radius'] * 2)
     )
 
+    # Try to load creatures from file, otherwise create random creatures.
     try:
         generations = loadcreatures(filename)
     except:
@@ -239,11 +259,11 @@ def setup():
 
         generations.append(creatures)
 
-    target = (0,0)
-
+    # Thread pool to run networks in
     thread_pool = ThreadPoolExecutor(max_workers=8)
 
     sim_time = 0
+    target = (0,0)
     sim_state = 'RUNNING'
 
 def logic():
@@ -256,9 +276,12 @@ def logic():
         create_generation()
 
     elif sim_state == 'RUNNING':
+        # Fill thread pool with creature update jobs
         futures = []
         for creature in generations[-1]:
             futures.append(thread_pool.submit(update_creature, creature))
+
+        # Get fitness results
         for f in futures:
             fit = f.result(5.0)
             if fit > max_fitness:
@@ -266,6 +289,7 @@ def logic():
 
         sim_time = sim_time + 1
 
+        # Check if generation is finished
         if sim_time > ticks_per_gen:
             if auto_gen:
                 sim_state = 'GEN_DONE'
@@ -491,6 +515,7 @@ def draw():
 
     # Draw creatures
     for creature in generations[-1]:
+        # Draw main circle fill
         pygame.draw.circle(
             screen,
             creature.color,
@@ -498,6 +523,7 @@ def draw():
             style['creature']['radius']
         )
 
+        # Find slightly darker shade for border
         hsv = (
             creature.color.hsva[0],
             creature.color.hsva[1],
@@ -506,11 +532,13 @@ def draw():
 
         border_color = pygame.Color(0,0,0,0)
 
+        # Set border color, or fail and print debug (Had out-of-range execs here)
         try:
             border_color.hsva = hsv
         except:
             print(hsv)
 
+        # Draw border
         pygame.draw.circle(
             screen,
             border_color,
@@ -519,7 +547,7 @@ def draw():
             2
         )
 
-
+        # Draw mouth
         pygame.draw.circle(
             screen,
             border_color,
@@ -528,11 +556,13 @@ def draw():
             math.floor(style['creature']['radius']/2)
         )
 
+        # Generate name texture
         name_text_surface = style['creature']['name_font'].render(
             '{} #{}: {}'.format(creature.name, creature.number,'%.0f' % creature.fitness),
             True, style['black']
         )
 
+        # Draw name
         screen.blit(
             name_text_surface,
             (creature.pos[0] - (name_text_surface.get_width() / 2),
