@@ -5,18 +5,24 @@ from pprint import pprint
 
 class Neuron:
     saturation = 255
-    delete_chance = 0.01
+    delete_chance = 0.02
     replace_chance = 0.01
     max_replace = 2.0
-    mutate_chance = 0.5
+    mutate_chance = 0.05
     max_mutate = 0.5
+    max_bias_mutate = 0.2
 
-    def __init__(self, inputs, sigmoid, random_w):
+    def __init__(self, inputs, activate_function, random_w):
         self.inputs = inputs
         self.weights = []
         self.value = 0.0
-        self.sigmoid = sigmoid
+        self.activate_function = activate_function
         self.random_w = random_w
+
+        if self.random_w:
+            self.bias = random.uniform(-1.0,1.0)
+        else:
+            self.bias = 0.0
 
         for i in range(0, len(self.inputs)):
             if self.random_w:
@@ -31,11 +37,13 @@ class Neuron:
             n = n + (self.inputs[i].value * self.weights[i])
             # print('Input {}, weight {}, value {}'.format(self.inputs[i].value,self.weights[i],1 / (1 + math.exp(-n))))
 
-        n = min(n,self.saturation)
-        n = max(n,-self.saturation)
-        if self.sigmoid:
+        n = n + self.bias
+        
+        if self.activate_function == 'sigmoid':
             self.value = 1 / (1 + math.exp(-n))
             self.value = (self.value * 2) - 1.0
+        elif self.activate_function == 'relu':
+            self.value = max(0,n)
         else:
             self.value = (n / len(self.inputs))
 
@@ -50,6 +58,9 @@ class Neuron:
             if random.uniform(0.0,1.0) < self.replace_chance:
                 self.weights[i] = random.uniform(-self.max_replace,self.max_replace)
 
+        if random.uniform(0.0,1.0) < self.mutate_chance:
+            self.bias = self.bias + random.uniform(-self.max_bias_mutate,self.max_bias_mutate)
+
     def set_inputs(self, value): # For input layer only
         for input in self.inputs:
             input.value = float(value)
@@ -63,7 +74,7 @@ class Input:
 
 class Brain:
     def __init__(self,seed):
-        self.hiddenlayersize = 5
+        self.hiddenlayersize = 6
         self.hiddenlayers = 2
         self.layers = []
 
@@ -71,14 +82,14 @@ class Brain:
 
         # Input layer - speed, sin(a), cos(a), rspeed, xdiff, ydiff, 0, 1
         inputlayer = []
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
-        inputlayer.append(Neuron([Input()], False, False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
+        inputlayer.append(Neuron([Input()], 'none', False))
 
         self.layers.append(inputlayer)
 
@@ -86,17 +97,17 @@ class Brain:
             # Hidden layer
             hiddenlayer = []
             for j in range(0,self.hiddenlayersize):
-                hiddenlayer.append(Neuron(list(self.layers[len(self.layers)-1]), True, True))
+                hiddenlayer.append(Neuron(list(self.layers[len(self.layers)-1]), 'relu', True))
 
             self.layers.append(hiddenlayer)
 
         # Output layer - speed, rspeed, r, g, b
         outputlayer = []
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], True, True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
+        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
 
         self.layers.append(outputlayer)
 

@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-generationspersave = 10
-target_population = 60
-killed_per_gen = 10
-ticks_per_gen = 300
+generationspersave = 100
+target_population = 200
+killed_per_gen = 40
+ticks_per_gen = 100
 auto_gen = True
 frameskip = 1
 max_fitness_per_tick = 500
@@ -95,7 +95,7 @@ class Creature:
         # Update velocity and colour
         self.speed = max(0.0,output['speed']) * self.max_speed
         self.rspeed = output['rspeed'] * self.max_rspeed
-        rgb = tuple([math.floor((x*128)+128) for x in output['rgb']])
+        rgb = tuple([math.floor((x*127)+127) for x in output['rgb']])
         self.color = pygame.Color(rgb[0],rgb[1],rgb[2])
 
     def mutate(self):
@@ -526,7 +526,7 @@ def draw():
         # Find slightly darker shade for border
         hsv = (
             creature.color.hsva[0],
-            creature.color.hsva[1],
+            min(max(creature.color.hsva[1],100),0),
             min(max(creature.color.hsva[2] - 40,0),100)
         )
 
