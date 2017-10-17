@@ -3,14 +3,14 @@ import math
 import random
 
 hidden_layers = 1
-layer_size = 6
+layer_size = 8
 initial_weight_sigma = 1.0
 
 class Neuron:
     delete_chance = 0.005
     replace_chance = 0.005
     replace_sigma = 1.0
-    mutate_chance = 0.05
+    mutate_chance = 0.1
     mutate_sigma = 1.0
     bias_sigma = 1.0
 
@@ -94,22 +94,21 @@ class InputLayer:
 class Brain:
     def __init__(self, seed):
         self.layers = []
-        prevlayersize = 8 # Input layer size
+        prevlayersize = 7 # Input layer size
 
         self.layers.append(InputLayer(prevlayersize))
 
         for i in range(hidden_layers):
-            self.layers.append(Layer(layer_size, prevlayersize, np.full(layer_size, 'tanh')))
+            self.layers.append(Layer(layer_size, prevlayersize, np.full(layer_size, 'relu')))
             prevlayersize = layer_size
 
-        self.layers.append(Layer(5, prevlayersize, np.full(layer_size, 'tanh')))
+        self.layers.append(Layer(5, prevlayersize, np.full(layer_size, 'sigmoid')))
 
-    def tick(self,speed,sina,cosa,rspeed,xdiff,ydiff):
+    def tick(self,speed,rspeed,angle,xdiff,ydiff):
         inputs = np.array([
             speed,
-            sina,
-            cosa,
             rspeed,
+            angle,
             xdiff,
             ydiff,
             0.0,

@@ -15,13 +15,13 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-generationspersave = 1000
-target_population = 60
-killed_per_gen = 5
-ticks_per_gen = 200
+generationspersave = 10000
+target_population = 120
+killed_per_gen = 15
+ticks_per_gen = 120
 auto_gen = True
 frameskip = 1
-max_fitness_per_tick = 500
+max_fitness_per_tick = 50
 filename = 'creatures.pkl'
 
 # Initialise pygame
@@ -68,17 +68,20 @@ class Creature:
         # Reset variables
         self.speed = 0.0
         self.rspeed = 0.0
-        self.angle = math.pi/2
+        self.angle = random.uniform(0.0,math.pi*2)
         self.fitness = 0.0
         self.start_pos = self.pos
 
     def tick(self):
+        anglediff = (self.angle - math.atan((target[1]-self.pos[1])/(target[0]-self.pos[0])))
+        if anglediff > math.pi:
+            anglediff = anglediff - math.pi
+
         # Tick the brain one step
         output = self.brain.tick(
             self.speed / self.max_speed,
-            math.sin(self.angle),
-            math.cos(self.angle),
             self.rspeed / self.max_rspeed,
+            anglediff,
             (self.pos[0]-target[0])/style['sim_panel'].width,
             (self.pos[1]-target[1])/style['sim_panel'].height
         )
@@ -94,8 +97,8 @@ class Creature:
 
         # Update velocity and colour
         self.speed = max(0.0,output['speed']) * self.max_speed
-        self.rspeed = output['rspeed'] * self.max_rspeed
-        rgb = tuple([math.floor((x*127)+127) for x in output['rgb']])
+        self.rspeed = (output['rspeed'] - 0.5) * self.max_rspeed
+        rgb = tuple([math.floor((x*255)) for x in output['rgb']])
         self.color = pygame.Color(rgb[0],rgb[1],rgb[2])
 
     def mutate(self):
@@ -103,8 +106,20 @@ class Creature:
         self.brain.mutate()
 
 def get_name():
-    name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(2)])
+    name = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(4)])
     return name
+
+def get_target():
+    return (
+        random.randint(
+            bounding_rect.left,
+            bounding_rect.left + bounding_rect.width
+        ),
+        random.randint(
+            bounding_rect.top,
+            bounding_rect.top + bounding_rect.height
+        )
+    )
 
 def get_clicked_object(pos):
     for creature in generations[-1]:
@@ -127,10 +142,10 @@ def update_creature(creature):
 
     # Use creature's velocities to update angle and position
     creature.angle = creature.angle + creature.rspeed
-    while creature.angle > (math.pi * 2):
+    if creature.angle > (math.pi * 2):
         creature.angle = creature.angle - (math.pi * 2)
 
-    while creature.angle < -(math.pi * 2):
+    if creature.angle < -(math.pi * 2):
         creature.angle = creature.angle + (math.pi * 2)
 
     newpos = (
@@ -188,19 +203,10 @@ def create_generation():
         savecreatures(filename,generations)
 
     # Move target randomly
-    target = (
-        random.randint(
-            bounding_rect.left,
-            bounding_rect.left + bounding_rect.width
-        ),
-        random.randint(
-            bounding_rect.top,
-            bounding_rect.top + bounding_rect.height
-        )
-    )
+    target = get_target()
 
     # Move target to the centre of the play area
-    target = (bounding_rect.left + bounding_rect.width/2,bounding_rect.top + bounding_rect.height/2)
+    # target = (bounding_rect.left + bounding_rect.width/2,bounding_rect.top + bounding_rect.height/2)
 
     # Reset simulation
     sim_time = 0
@@ -262,8 +268,9 @@ def setup():
     # Thread pool to run networks in
     thread_pool = ThreadPoolExecutor(max_workers=32)
 
+    target = get_target()
+
     sim_time = 0
-    target = (0,0)
     sim_state = 'RUNNING'
 
 def logic():
@@ -437,45 +444,39 @@ def draw():
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*1))
         )
 
-        value_text_surface = style['creature']['name_font'].render('sin(a)', True, style['black'])
+        value_text_surface = style['creature']['name_font'].render('RSpeed', True, style['black'])
         screen.blit(
             value_text_surface,
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*2))
         )
-        value_text_surface = style['creature']['name_font'].render('cos(a)', True, style['black'])
+        value_text_surface = style['creature']['name_font'].render('AngleDiff', True, style['black'])
         screen.blit(
             value_text_surface,
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*3))
-        )
-        value_text_surface = style['creature']['name_font'].render('RSpeed', True, style['black'])
-
-        screen.blit(
-            value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*4))
         )
         value_text_surface = style['creature']['name_font'].render('XDiff', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*5))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*4))
         )
         value_text_surface = style['creature']['name_font'].render('YDiff', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*6))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*5))
         )
         value_text_surface = style['creature']['name_font'].render('0', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*7))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*6))
         )
         value_text_surface = style['creature']['name_font'].render('1', True, style['black'])
 
         screen.blit(
             value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*8))
+            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*7))
         )
 
         # Draw neurons
@@ -527,7 +528,7 @@ def draw():
         hsv = (
             creature.color.hsva[0],
             min(max(creature.color.hsva[1],100),0),
-            min(max(creature.color.hsva[2] - 40,0),100)
+            min(max(creature.color.hsva[2] - 60,0),100)
         )
 
         border_color = pygame.Color(0,0,0,0)
