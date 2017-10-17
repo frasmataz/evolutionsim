@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Program parameters
-generationspersave = 100
-target_population = 200
-killed_per_gen = 40
-ticks_per_gen = 100
+generationspersave = 1000
+target_population = 60
+killed_per_gen = 5
+ticks_per_gen = 200
 auto_gen = True
 frameskip = 1
 max_fitness_per_tick = 500
@@ -82,7 +82,7 @@ class Creature:
             (self.pos[0]-target[0])/style['sim_panel'].width,
             (self.pos[1]-target[1])/style['sim_panel'].height
         )
-        
+
         # Find progress towards the goal
         progress = (dist(self.start_pos[0], self.start_pos[1], target[0], target[1]) /
             dist(self.pos[0], self.pos[1], target[0], target[1]) - 1)
@@ -198,7 +198,7 @@ def create_generation():
             bounding_rect.top + bounding_rect.height
         )
     )
-    
+
     # Move target to the centre of the play area
     target = (bounding_rect.left + bounding_rect.width/2,bounding_rect.top + bounding_rect.height/2)
 
@@ -260,7 +260,7 @@ def setup():
         generations.append(creatures)
 
     # Thread pool to run networks in
-    thread_pool = ThreadPoolExecutor(max_workers=8)
+    thread_pool = ThreadPoolExecutor(max_workers=32)
 
     sim_time = 0
     target = (0,0)
@@ -405,7 +405,7 @@ def draw():
                     + (style['net_display_area'].width/2)
                     + (style['net_node_spacing'][0]*(layern-1)))
             n = 1
-            for neuron in layer:
+            for neuron in layer.neurons:
                 ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
 
                 m = 1
@@ -486,7 +486,7 @@ def draw():
                     + (style['net_node_spacing'][0]*(layern-1)))
 
             n = 1
-            for neuron in layer:
+            for neuron in layer.neurons:
                 ypos = style['net_display_area'].top + (style['net_node_spacing'][1]*n)
                 sat = min(abs(neuron.value) * 100, 100)
                 color = pygame.Color(style['highlight'][0], style['highlight'][1], style['highlight'][2])

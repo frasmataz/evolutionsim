@@ -1,142 +1,131 @@
-import random
+import numpy as np
 import math
-import time
-from pprint import pprint
+import random
+
+hidden_layers = 1
+layer_size = 6
+initial_weight_sigma = 1.0
 
 class Neuron:
-    saturation = 255
-    delete_chance = 0.02
-    replace_chance = 0.01
-    max_replace = 2.0
+    delete_chance = 0.005
+    replace_chance = 0.005
+    replace_sigma = 1.0
     mutate_chance = 0.05
-    max_mutate = 0.5
-    max_bias_mutate = 0.2
+    mutate_sigma = 1.0
+    bias_sigma = 1.0
 
-    def __init__(self, inputs, activate_function, random_w):
-        self.inputs = inputs
-        self.weights = []
-        self.value = 0.0
+    def __init__(self, input_size, activate_function):
+        self.weights = np.random.normal(
+            0.0,
+            initial_weight_sigma,
+            input_size
+        )
         self.activate_function = activate_function
-        self.random_w = random_w
+        self.bias = 0.0
 
-        if self.random_w:
-            self.bias = random.uniform(-1.0,1.0)
-        else:
-            self.bias = 0.0
+    def tick(self, inputs):
+        x = (inputs * self.weights).sum() + self.bias
 
-        for i in range(0, len(self.inputs)):
-            if self.random_w:
-                self.weights.append(random.uniform(-2.0,2.0))
-            else:
-                self.weights.append(1.0)
-
-
-    def decide(self):
-        n = 0.0
-        for i in range(0,len(self.inputs)):
-            n = n + (self.inputs[i].value * self.weights[i])
-            # print('Input {}, weight {}, value {}'.format(self.inputs[i].value,self.weights[i],1 / (1 + math.exp(-n))))
-
-        n = n + self.bias
-        
         if self.activate_function == 'sigmoid':
-            self.value = 1 / (1 + math.exp(-n))
-            self.value = (self.value * 2) - 1.0
+            x = 1 / (1 + math.exp(-x))
+        elif self.activate_function == 'tanh':
+            x = np.tanh(x)
         elif self.activate_function == 'relu':
-            self.value = max(0,n)
-        else:
-            self.value = (n / len(self.inputs))
+            x = max(0.0, x)
+
+        self.value = x
+
+        return x
 
     def mutate(self):
         for i in range(len(self.weights)):
             if random.uniform(0.0,1.0) < self.mutate_chance:
-                self.weights[i] = self.weights[i] + random.uniform(-self.max_mutate,self.max_mutate)
+                self.weights[i] = self.weights[i] + np.random.normal(0.0, self.mutate_sigma)
 
             if random.uniform(0.0,1.0) < self.delete_chance:
                 self.weights[i] = 0.0
 
             if random.uniform(0.0,1.0) < self.replace_chance:
-                self.weights[i] = random.uniform(-self.max_replace,self.max_replace)
+                self.weights[i] = np.random.normal(0.0, self.replace_sigma)
 
         if random.uniform(0.0,1.0) < self.mutate_chance:
-            self.bias = self.bias + random.uniform(-self.max_bias_mutate,self.max_bias_mutate)
+            self.bias = self.bias + random.uniform(0.0, self.bias_sigma)
 
-    def set_inputs(self, value): # For input layer only
-        for input in self.inputs:
-            input.value = float(value)
-
-class Input:
+class Inputneuron:
     def __init__(self):
-        self.value = 0.0
+        self.weights = [1.0]
 
-    def update(self, value):
-        self.value = value
+    def tick(self, inputs):
+        self.value = inputs.sum()
+        return self.value
+
+    def mutate(self):
+        pass
+
+class Layer:
+    def __init__(self, size, input_size, activate_functions):
+        self.size = size
+        self.neurons = []
+
+        for i in range(self.size):
+            self.neurons.append(Neuron(input_size, activate_functions[i]))
+
+    def tick(self, inputs):
+        output = []
+        for n in self.neurons:
+            output.append(n.tick(inputs))
+
+        return output
+
+class InputLayer:
+    def __init__(self, size):
+        self.neurons = []
+        self.size = size
+        for i in range(size):
+            self.neurons.append(Inputneuron())
+
+    def tick(self, inputs):
+        output = []
+        for i in range(self.size):
+            output.append(self.neurons[i].tick(inputs[i]))
+
+        return output
 
 class Brain:
-    def __init__(self,seed):
-        self.hiddenlayersize = 6
-        self.hiddenlayers = 2
+    def __init__(self, seed):
         self.layers = []
+        prevlayersize = 8 # Input layer size
 
-        random.seed(seed)
+        self.layers.append(InputLayer(prevlayersize))
 
-        # Input layer - speed, sin(a), cos(a), rspeed, xdiff, ydiff, 0, 1
-        inputlayer = []
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
-        inputlayer.append(Neuron([Input()], 'none', False))
+        for i in range(hidden_layers):
+            self.layers.append(Layer(layer_size, prevlayersize, np.full(layer_size, 'tanh')))
+            prevlayersize = layer_size
 
-        self.layers.append(inputlayer)
-
-        for i in range(0,self.hiddenlayers):
-            # Hidden layer
-            hiddenlayer = []
-            for j in range(0,self.hiddenlayersize):
-                hiddenlayer.append(Neuron(list(self.layers[len(self.layers)-1]), 'relu', True))
-
-            self.layers.append(hiddenlayer)
-
-        # Output layer - speed, rspeed, r, g, b
-        outputlayer = []
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
-        outputlayer.append(Neuron(self.layers[len(self.layers)-1], 'sigmoid', True))
-
-        self.layers.append(outputlayer)
+        self.layers.append(Layer(5, prevlayersize, np.full(layer_size, 'tanh')))
 
     def tick(self,speed,sina,cosa,rspeed,xdiff,ydiff):
-        self.layers[0][0].set_inputs(speed)
-        self.layers[0][1].set_inputs(sina)
-        self.layers[0][2].set_inputs(cosa)
-        self.layers[0][3].set_inputs(rspeed)
-        self.layers[0][4].set_inputs(xdiff)
-        self.layers[0][5].set_inputs(ydiff)
-        self.layers[0][6].set_inputs(0.0)
-        self.layers[0][7].set_inputs(1.0)
+        inputs = np.array([
+            speed,
+            sina,
+            cosa,
+            rspeed,
+            xdiff,
+            ydiff,
+            0.0,
+            1.0
+        ], dtype=float)
 
-        for l in self.layers:
-            for n in l:
-                n.decide()
+        for layer in self.layers:
+            inputs = layer.tick(inputs)
 
         return {
-            'speed': self.layers[len(self.layers)-1][0].value,
-            'rspeed': self.layers[len(self.layers)-1][1].value,
-            'rgb': (self.layers[len(self.layers)-1][2].value,
-                  self.layers[len(self.layers)-1][3].value,
-                  self.layers[len(self.layers)-1][4].value)
+            'speed': inputs[0],
+            'rspeed': inputs[1],
+            'rgb': (inputs[2], inputs[3], inputs[4])
         }
 
     def mutate(self):
-        i = 0
         for l in self.layers:
-            for n in l:
-                if i > 0:
-                    n.mutate()
-            i = i + 1
+            for n in l.neurons:
+                n.mutate()
