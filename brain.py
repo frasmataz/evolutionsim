@@ -94,7 +94,7 @@ class InputLayer:
 class Brain:
     def __init__(self, seed):
         self.layers = []
-        prevlayersize = 7 # Input layer size
+        prevlayersize = 3 # Input layer size
 
         self.layers.append(InputLayer(prevlayersize))
 
@@ -104,15 +104,11 @@ class Brain:
 
         self.layers.append(Layer(5, prevlayersize, np.full(layer_size, 'sigmoid')))
 
-    def tick(self,speed,rspeed,angle,xdiff,ydiff):
+    def tick(self,angle,xdiff,ydiff):
         inputs = np.array([
-            speed,
-            rspeed,
             angle,
             xdiff,
-            ydiff,
-            0.0,
-            1.0
+            ydiff
         ], dtype=float)
 
         for layer in self.layers:

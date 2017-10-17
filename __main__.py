@@ -79,8 +79,6 @@ class Creature:
 
         # Tick the brain one step
         output = self.brain.tick(
-            self.speed / self.max_speed,
-            self.rspeed / self.max_rspeed,
             anglediff,
             (self.pos[0]-target[0])/style['sim_panel'].width,
             (self.pos[1]-target[1])/style['sim_panel'].height
@@ -438,45 +436,22 @@ def draw():
         labelxpos = (style['net_input_label'])
 
         # Draw labels on input
-        value_text_surface = style['creature']['name_font'].render('Speed', True, style['black'])
+        value_text_surface = style['creature']['name_font'].render('AngleDiff', True, style['black'])
         screen.blit(
             value_text_surface,
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*1))
         )
 
-        value_text_surface = style['creature']['name_font'].render('RSpeed', True, style['black'])
+        value_text_surface = style['creature']['name_font'].render('XDiff', True, style['black'])
         screen.blit(
             value_text_surface,
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*2))
         )
-        value_text_surface = style['creature']['name_font'].render('AngleDiff', True, style['black'])
+
+        value_text_surface = style['creature']['name_font'].render('YDiff', True, style['black'])
         screen.blit(
             value_text_surface,
             (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*3))
-        )
-        value_text_surface = style['creature']['name_font'].render('XDiff', True, style['black'])
-
-        screen.blit(
-            value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*4))
-        )
-        value_text_surface = style['creature']['name_font'].render('YDiff', True, style['black'])
-
-        screen.blit(
-            value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*5))
-        )
-        value_text_surface = style['creature']['name_font'].render('0', True, style['black'])
-
-        screen.blit(
-            value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*6))
-        )
-        value_text_surface = style['creature']['name_font'].render('1', True, style['black'])
-
-        screen.blit(
-            value_text_surface,
-            (labelxpos,(value_text_surface.get_height()/2) + style['net_display_area'].top + (style['net_node_spacing'][1]*7))
         )
 
         # Draw neurons
