@@ -73,9 +73,12 @@ class Creature:
         self.start_pos = self.pos
 
     def tick(self):
-        anglediff = (self.angle - math.atan((target[1]-self.pos[1])/(target[0]-self.pos[0])))
-        if anglediff > math.pi:
-            anglediff = anglediff - math.pi
+        try:
+            anglediff = math.pi - (self.angle - math.atan2((target[1]-self.pos[1]), (target[0]-self.pos[0])))
+        except:
+            anglediff = 0.0
+
+        anglediff = anglediff - math.pi
 
         # Tick the brain one step
         output = self.brain.tick(
